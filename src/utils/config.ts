@@ -222,6 +222,9 @@ export type GlobalConfig = {
     rejected?: string[]
   }
   primaryApiKey?: string // Primary API key for the user when no environment variable is set, set via oauth (TODO: rename)
+  providerApiKeys?: Record<string, string>
+  activeProvider?: string | null
+  providerModelsCache?: Record<string, { payload?: Record<string, unknown> }>
   hasAcknowledgedCostThreshold?: boolean
   hasSeenUndercoverAutoNotice?: boolean // ant-only: whether the one-time auto-undercover explainer has been shown
   hasSeenUltraplanTerms?: boolean // ant-only: whether the one-time CCR terms notice has been shown in the ultraplan launch dialog
@@ -574,6 +577,9 @@ export type GlobalConfig = {
 
   // Additional model options for the model picker (fetched during bootstrap).
   additionalModelOptionsCache?: ModelOption[]
+
+  // Raw provider model-list payload for runtime model discovery.
+  providerModelsResponseCache?: Record<string, unknown>
 
   // Disk cache for /api/claude_code/organizations/metrics_enabled.
   // Org-level settings change rarely; persisting across processes avoids a

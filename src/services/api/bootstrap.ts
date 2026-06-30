@@ -34,6 +34,7 @@ const bootstrapResponseSchema = lazySchema(() =>
           })),
       )
       .nullish(),
+    provider_models: z.record(z.unknown()).nullish(),
   }),
 )
 
@@ -118,12 +119,14 @@ export async function fetchBootstrapData(): Promise<void> {
 
     const clientData = response.client_data ?? null
     const additionalModelOptions = response.additional_model_options ?? []
+    const providerModelsResponse = response.provider_models ?? null
 
     // Only persist if data actually changed — avoids a config write on every startup.
     const config = getGlobalConfig()
     if (
       isEqual(config.clientDataCache, clientData) &&
-      isEqual(config.additionalModelOptionsCache, additionalModelOptions)
+      isEqual(config.additionalModelOptionsCache, additionalModelOptions) &&
+      isEqual(config.providerModelsResponseCache, providerModelsResponse)
     ) {
       logForDebugging('[Bootstrap] Cache unchanged, skipping write')
       return
@@ -134,6 +137,17 @@ export async function fetchBootstrapData(): Promise<void> {
       ...current,
       clientDataCache: clientData,
       additionalModelOptionsCache: additionalModelOptions,
+      providerModelsResponseCache: providerModelsResponse,
+      providerModelsCache: {
+        ...(current.providerModelsCache ?? {}),
+        ...(current.activeProvider
+          ? {
+              [current.activeProvider]: {
+                payload: providerModelsResponse ?? undefined,
+              },
+            }
+          : {}),
+      },
     }))
   } catch (error) {
     logError(error)

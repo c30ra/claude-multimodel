@@ -1160,6 +1160,40 @@ export async function saveApiKey(apiKey: string): Promise<void> {
   clearLegacyApiKeyPrefetch()
 }
 
+export async function saveProviderApiKey(provider: string, apiKey: string): Promise<void> {
+  if (!provider || !/^[a-z0-9._-]+$/i.test(provider)) {
+    throw new Error('Invalid provider name')
+  }
+  if (!apiKey.trim()) {
+    throw new Error('API key cannot be empty')
+  }
+
+  saveGlobalConfig(current => ({
+    ...current,
+    providerApiKeys: {
+      ...(current.providerApiKeys ?? {}),
+      [provider]: apiKey,
+    },
+  }))
+
+  getApiKeyFromConfigOrMacOSKeychain.cache.clear?.()
+}
+
+export function getProviderApiKey(provider: string): string | null {
+  return getGlobalConfig().providerApiKeys?.[provider] ?? null
+}
+
+export function removeProviderApiKey(provider: string): void {
+  saveGlobalConfig(current => {
+    const next = { ...(current.providerApiKeys ?? {}) }
+    delete next[provider]
+    return {
+      ...current,
+      providerApiKeys: Object.keys(next).length > 0 ? next : undefined,
+    }
+  })
+}
+
 export function isCustomApiKeyApproved(apiKey: string): boolean {
   const config = getGlobalConfig()
   const normalizedKey = normalizeApiKeyForConfig(apiKey)

@@ -33,6 +33,7 @@ import {
 } from './model.js'
 import { has1mContext } from '../context.js'
 import { getGlobalConfig } from '../config.js'
+import { getProviderModelOptions } from './providerModels.js'
 
 // @[MODEL LAUNCH]: Update all the available and default model option strings below.
 
@@ -499,6 +500,15 @@ function getKnownModelOption(model: string): ModelOption | null {
 
 export function getModelOptions(fastMode = false): ModelOption[] {
   const options = getModelOptionsBase(fastMode)
+
+  const providerOptions = getProviderModelOptions(
+    getGlobalConfig().providerModelsResponseCache,
+  )
+  for (const opt of providerOptions) {
+    if (!options.some(existing => existing.value === opt.value)) {
+      options.push(opt)
+    }
+  }
 
   // Add the custom model from the ANTHROPIC_CUSTOM_MODEL_OPTION env var
   const envCustomModel = process.env.ANTHROPIC_CUSTOM_MODEL_OPTION

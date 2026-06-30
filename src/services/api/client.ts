@@ -16,6 +16,7 @@ import { getUserAgent } from 'src/utils/http.js'
 import { getSmallFastModel } from 'src/utils/model/model.js'
 import {
   getAPIProvider,
+  getRuntimeProviderConfig,
   isFirstPartyAnthropicBaseUrl,
 } from 'src/utils/model/providers.js'
 import { getProxyFetchOptions } from 'src/utils/proxy.js'
@@ -118,9 +119,14 @@ export async function getAnthropicClient({
     ...(clientApp ? { 'x-client-app': clientApp } : {}),
   }
 
+  const runtimeProvider = getRuntimeProviderConfig()
+  if (runtimeProvider?.headers) {
+    Object.assign(defaultHeaders, runtimeProvider.headers)
+  }
+
   // Log API client configuration for HFI debugging
   logForDebugging(
-    `[API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: ${!!process.env.ANTHROPIC_CUSTOM_HEADERS}, has Authorization header: ${!!customHeaders['Authorization']}`,
+    `[API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: ${!!process.env.ANTHROPIC_CUSTOM_HEADERS}, has Authorization header: ${!!customHeaders['Authorization']}, runtimeProvider=${runtimeProvider?.provider ?? 'none'}`,
   )
 
   // Add additional protection header if enabled via env var
@@ -316,16 +322,21 @@ export async function getAnthropicClient({
   }
 
   // Determine authentication method based on available tokens
+  const providerApiKey = runtimeProvider?.apiKey ?? null
   const clientConfig: ConstructorParameters<typeof Anthropic>[0] = {
-    apiKey: isClaudeAISubscriber() ? null : apiKey || getAnthropicApiKey(),
+    apiKey: isClaudeAISubscriber()
+      ? null
+      : providerApiKey || apiKey || getAnthropicApiKey(),
     authToken: isClaudeAISubscriber()
       ? getClaudeAIOAuthTokens()?.accessToken
       : undefined,
     // Set baseURL from OAuth config when using staging OAuth
-    ...(process.env.USER_TYPE === 'ant' &&
-    isEnvTruthy(process.env.USE_STAGING_OAUTH)
-      ? { baseURL: getOauthConfig().BASE_API_URL }
-      : {}),
+    ...(runtimeProvider?.baseURL
+      ? { baseURL: runtimeProvider.baseURL }
+      : process.env.USER_TYPE === 'ant' &&
+          isEnvTruthy(process.env.USE_STAGING_OAUTH)
+        ? { baseURL: getOauthConfig().BASE_API_URL }
+        : {}),
     ...ARGS,
     ...(isDebugToStdErr() && { logger: createStderrLogger() }),
   }
